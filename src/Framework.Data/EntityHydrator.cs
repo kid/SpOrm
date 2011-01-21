@@ -128,7 +128,9 @@ namespace Framework.Data
         {
             foreach (var columnMapping in entityMapping.Columns.Where(_ => _.PropertyInfo.CanWrite))
             {
-                columnMapping.PropertyInfo.SetValue(entity, row[columnMapping.ColumnName], null);
+                var value = row[columnMapping.ColumnName];
+                if (value is DBNull) value = null;
+                columnMapping.PropertyInfo.SetValue(entity, value, null);
             }
         }
 
