@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Framework.Data
@@ -31,10 +31,12 @@ namespace Framework.Data
 
         public void AddColumn(ColumnMapping columnMapping)
         {
+            if (columnMapping == null) throw new ArgumentNullException("columnMapping");
+
             if (columns.ContainsKey(columnMapping.ColumnName))
             {
                 throw new InvalidOperationException(
-                    string.Format(CultureInfo.CurrentCulture, "This enitty mapping already contains a column named {0}.", columnMapping.ColumnName)
+                    string.Format(CultureInfo.CurrentCulture, "This entity mapping already contains a column named {0}.", columnMapping.ColumnName)
                 );
             }
             columns.Add(columnMapping.ColumnName, columnMapping);
