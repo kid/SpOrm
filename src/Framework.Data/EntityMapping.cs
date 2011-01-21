@@ -41,5 +41,12 @@ namespace Framework.Data
             }
             columns.Add(columnMapping.ColumnName, columnMapping);
         }
+
+        public void AddRelation(OneToOneRelationMapping oneToOneMapping)
+        {
+            if (oneToOneMapping == null) throw new ArgumentNullException("oneToOneMapping");
+
+            oneToOneRelations.Add(oneToOneMapping.ColumnName, oneToOneMapping);
+        }
     }
 }
