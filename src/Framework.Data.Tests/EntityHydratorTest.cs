@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Collections.Generic;
+using System.Configuration;
 
 namespace Framework.Data.Tests
 {
@@ -76,7 +77,7 @@ namespace Framework.Data.Tests
 
             hydrator = new EntityHydrator(metadataStoreMock.Object, sessionMock.Object, sessionLevelCacheMock.Object);
 
-            connection = new SqlConnection(@"Data Source=.\SQLEXPRESS;Initial Catalog=TestDb;Integrated Security=True;Pooling=False");
+            connection = new SqlConnection(ConfigurationManager.ConnectionStrings["TestDatabase"].ConnectionString);
             connection.Open();
             transaction = connection.BeginTransaction();
         }
