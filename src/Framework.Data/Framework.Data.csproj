@@ -63,6 +63,12 @@
     <Compile Include="OneToOneRelationMapping.cs" />
     <Compile Include="PrimaryKeyMapping.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ResultSetMapping\IQueryResultDescription.cs" />
+    <Compile Include="ResultSetMapping\NonScalarQueryResult.cs" />
+    <Compile Include="ResultSetMapping\QueryCollectionResult.cs" />
+    <Compile Include="ResultSetMapping\QueryJoinResult.cs" />
+    <Compile Include="ResultSetMapping\ResultSetMappingDefinition.cs" />
+    <Compile Include="ResultSetMapping\QueryRootResult.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Framework.snk" />
