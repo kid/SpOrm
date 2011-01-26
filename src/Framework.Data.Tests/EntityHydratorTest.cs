@@ -32,7 +32,7 @@ namespace Framework.Data.Tests
     [TestClass]
     public class EntityHydratorTest
     {
-        private Dictionary<Type, EntityMapping> mappings;
+        private Dictionary<string, EntityMapping> mappings;
 
         private IDbConnection connection;
         private IDbTransaction transaction;
@@ -63,17 +63,18 @@ namespace Framework.Data.Tests
 
             bookMapping.AddRelation(new OneToOneRelationMapping { ColumnName = "AuthorId", PropertyInfo = typeof(Book).GetProperty("Author"), ReferenceType = typeof(Author) });
 
-            mappings = new Dictionary<Type, EntityMapping>
+            mappings = new Dictionary<string, EntityMapping>
             {
-                {typeof(Author), authorMapping},
-                {typeof(Book), bookMapping}
+                {"Author", authorMapping},
+                {"Book", bookMapping}
             };
 
             var metadataStoreMock = new Mock<IMetadataStore>();
             var sessionMock = new Mock<ISession>();
             var sessionLevelCacheMock = new Mock<ISessionLevelCache>();
 
-            metadataStoreMock.Setup(_ => _.GetMapping(It.IsAny<Type>())).Returns<Type>(_ => mappings[_]);
+            metadataStoreMock.Setup(_ => _.GetMapping(It.IsAny<Type>())).Returns<Type>(_ => mappings[_.Name]);
+            metadataStoreMock.Setup(_ => _.GetMapping(It.IsAny<string>())).Returns<string>(_ => mappings[_]);
 
             hydrator = new EntityHydrator(metadataStoreMock.Object, sessionMock.Object, sessionLevelCacheMock.Object);
 

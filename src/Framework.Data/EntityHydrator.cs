@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using Castle.DynamicProxy;
+using Framework.Data.ResultSetMapping;
 
 namespace Framework.Data
 {
@@ -34,51 +35,83 @@ namespace Framework.Data
         /// <returns></returns>
         public TEntity HydrateEntity<TEntity>(IDbCommand command)
         {
+            //if (command == null) throw new ArgumentNullException("command");
+
+            //var values = new Dictionary<string, object>();
+
+            //using (var reader = command.ExecuteReader())
+            //{
+            //    if (!reader.Read())
+            //    {
+            //        return default(TEntity);
+            //    }
+
+            //    for (int index = 0; index < reader.FieldCount; index++)
+            //    {
+            //        values.Add(reader.GetName(index), reader.GetValue(index));
+            //    }
+            //}
+
+            //return (TEntity)CreateEntityFromValues(metadataStore.GetMapping(typeof(TEntity)), values);
+            var resultSetDefinition = new ResultSetMappingDefinition().AddQueryReturn(new QueryRootResult(typeof(TEntity).Name));
+            return (TEntity)HydrateFromCommand(command, resultSetDefinition);
+        }
+
+        public object HydrateFromCommand(IDbCommand command, ResultSetMappingDefinition resultSetMapping)
+        {
             if (command == null) throw new ArgumentNullException("command");
+            if (resultSetMapping == null) throw new ArgumentNullException("resultSetMapping");
 
-            var values = new Dictionary<string, object>();
-
+            var rows = new List<Dictionary<string, object>>();
             using (var reader = command.ExecuteReader())
             {
-                if (!reader.Read())
+                while (reader.Read())
                 {
-                    return default(TEntity);
-                }
-
-                for (int index = 0; index < reader.FieldCount; index++)
-                {
-                    values.Add(reader.GetName(index), reader.GetValue(index));
+                    var values = new Dictionary<string, object>();
+                    for (int index = 0; index < reader.FieldCount; index++)
+                    {
+                        values.Add(reader.GetName(index), reader.GetValue(index));
+                    }
+                    rows.Add(values);
                 }
             }
 
-            return CreateEntityFromValues<TEntity>(values);
+            if (resultSetMapping.QueryReturns.Count == 1)
+            {
+                var rootResultMapping = resultSetMapping.QueryReturns.FirstOrDefault() as QueryRootResult;
+                if (rootResultMapping != null)
+                {
+                    return CreateEntityFromValues(metadataStore.GetMapping(rootResultMapping.EntityName), rows.First());
+                }
+            }
+            throw new NotSupportedException();
         }
 
         /// <summary>
         /// Creates the entity from the specified values, or return one from the session level cache.
         /// </summary>
-        /// <typeparam name="TEntity">The type of the entity.</typeparam>
+        /// <param name="entityType">Type of the entity.</param>
         /// <param name="values">The values.</param>
         /// <returns></returns>
-        private TEntity CreateEntityFromValues<TEntity>(IDictionary<string, object> values)
+        private object CreateEntityFromValues(EntityMapping entityMapping, IDictionary<string, object> values)
         {
-            var entityMapping = metadataStore.GetMapping(typeof(TEntity));
+            if (entityMapping == null) throw new ArgumentNullException("entityMapping");
 
             var primaryKeyValue = values[entityMapping.PrimaryKey.ColumnName];
 
-            TEntity entity;
-            if (sessionLevelCache.TryToFind<TEntity>(primaryKeyValue, out entity))
+            object entity = sessionLevelCache.TryToFind(entityMapping.EntityType, primaryKeyValue);
+            if (entity != null)
             {
                 return entity;
             }
 
-            entity = CreateEmptyEntity<TEntity>();
+            entity = CreateEmptyEntity(entityMapping.EntityType);
 
             entityMapping.PrimaryKey.PropertyInfo.SetValue(entity, primaryKeyValue, null);
             SetRegularColumns(entityMapping, entity, values);
             SetOneToOneRelations(entityMapping, entity, values);
 
-            sessionLevelCache.Store<TEntity>(primaryKeyValue, entity);
+            sessionLevelCache.Store(entityMapping.EntityType, primaryKeyValue, entity);
 
             return entity;
         }
@@ -86,11 +119,11 @@ namespace Framework.Data
         /// <summary>
         /// Creates an empty entity.
         /// </summary>
-        /// <typeparam name="TEntity">The type of the entity.</typeparam>
+        /// <param name="entityType">Type of the entity.</param>
         /// <returns></returns>
-        protected virtual TEntity CreateEmptyEntity<TEntity>()
+        protected virtual object CreateEmptyEntity(Type entityType)
         {
-            return Activator.CreateInstance<TEntity>();
+            return Activator.CreateInstance(entityType);
         }
 
         /// <summary>

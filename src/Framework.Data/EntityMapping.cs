@@ -27,6 +27,10 @@ namespace Framework.Data
         /// <value>The one to one relations.</value>
         public IEnumerable<OneToOneRelationMapping> OneToOneRelations { get { return oneToOneRelations.Values; } }
 
+        /// <summary>
+        /// Gets or sets the type of the entity.
+        /// </summary>
+        /// <value>The type of the entity.</value>
         public Type EntityType { get; set; }
 
         public void AddColumn(ColumnMapping columnMapping)
