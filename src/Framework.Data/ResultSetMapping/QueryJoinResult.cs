@@ -13,6 +13,17 @@
         /// <param name="alias">The alias.</param>
         /// <param name="ownerAlias">The owner alias.</param>
         /// <param name="ownerProperty">The owner property.</param>
+        public QueryJoinResult(string alias, string ownerAlias, string ownerProperty)
+            : this(alias, ownerAlias, ownerProperty, new Dictionary<string, string[]>())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="QueryJoinResult"/> class.
+        /// </summary>
+        /// <param name="alias">The alias.</param>
+        /// <param name="ownerAlias">The owner alias.</param>
+        /// <param name="ownerProperty">The owner property.</param>
         /// <param name="propertyMappings">The property mappings.</param>
         public QueryJoinResult(string alias, string ownerAlias, string ownerProperty, IDictionary<string, string[]> propertyMappings)
             : base(alias, propertyMappings)

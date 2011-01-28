@@ -14,6 +14,7 @@ namespace Framework.Data
         private readonly ISession session;
         private readonly ISessionLevelCache sessionLevelCache;
 
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EntityHydrator"/> class.
         /// </summary>
@@ -35,24 +36,6 @@ namespace Framework.Data
         /// <returns></returns>
         public TEntity HydrateEntity<TEntity>(IDbCommand command)
         {
-            //if (command == null) throw new ArgumentNullException("command");
-
-            //var values = new Dictionary<string, object>();
-
-            //using (var reader = command.ExecuteReader())
-            //{
-            //    if (!reader.Read())
-            //    {
-            //        return default(TEntity);
-            //    }
-
-            //    for (int index = 0; index < reader.FieldCount; index++)
-            //    {
-            //        values.Add(reader.GetName(index), reader.GetValue(index));
-            //    }
-            //}
-
-            //return (TEntity)CreateEntityFromValues(metadataStore.GetMapping(typeof(TEntity)), values);
             var resultSetDefinition = new ResultSetMappingDefinition().AddQueryReturn(new QueryRootResult(typeof(TEntity).Name));
             return (TEntity)HydrateFromCommand(command, resultSetDefinition);
         }
@@ -76,15 +59,51 @@ namespace Framework.Data
                 }
             }
 
-            if (resultSetMapping.QueryReturns.Count == 1)
-            {
-                var rootResultMapping = resultSetMapping.QueryReturns.FirstOrDefault() as QueryRootResult;
-                if (rootResultMapping != null)
+            var results = resultSetMapping.QueryReturns.Reverse().Select<IQueryResultDescription, object>(
+                queryResultDescription =>
                 {
-                    return CreateEntityFromValues(metadataStore.GetMapping(rootResultMapping.EntityName), rows.First());
-                }
+                    var rootResultDescription = queryResultDescription as QueryRootResult;
+                    if (rootResultDescription != null) return Process(rootResultDescription, rows);
+                    var joinResultMapping = queryResultDescription as QueryJoinResult;
+                    if (joinResultMapping != null) return Process(resultSetMapping, joinResultMapping, rows);
+                    throw new NotSupportedException();
+                });
+            return results.Last();
+        }
+
+        private object Process(ResultSetMappingDefinition resultSetMapping, QueryJoinResult joinResultMapping, List<Dictionary<string, object>> rows)
+        {
+            var parentEntityMapping = metadataStore.GetMapping(
+                resultSetMapping.QueryReturns.OfType<QueryRootResult>().First(_ => joinResultMapping.OwnerAlias == _.Alias).EntityName
+            );
+
+            var entityMapping = metadataStore.GetMapping(
+                parentEntityMapping.OneToOneRelations.FirstOrDefault(_ => _.ColumnName == joinResultMapping.OwnerProperty).ReferenceType
+            );
+
+            if (entityMapping != null)
+            {
+                var prefix = joinResultMapping.Alias + "_";
+                var rowValues = rows.First()
+                    .Where(_ => _.Key.StartsWith(prefix, StringComparison.Ordinal))
+                    .ToDictionary(_ => _.Key.Substring(prefix.Length), _ => _.Value);
+
+                return CreateEntityFromValues(entityMapping, rowValues);
             }
             throw new NotSupportedException();
+        }
+
+        private object Process(QueryRootResult rootResultMapping, IList<Dictionary<string, object>> rows)
+        {
+            var rowValues = rows.First();
+            if (!string.IsNullOrEmpty(rootResultMapping.Alias))
+            {
+                var prefix = rootResultMapping.Alias + "_";
+                rowValues = rowValues
+                    .Where(_ => _.Key.StartsWith(prefix, StringComparison.Ordinal))
+                    .ToDictionary(_ => _.Key.Substring(prefix.Length), _ => _.Value);
+            }
+            return CreateEntityFromValues(metadataStore.GetMapping(rootResultMapping.EntityName), rowValues);
         }
 
         /// <summary>
@@ -180,7 +199,7 @@ namespace Framework.Data
                 else
                 {
                     var referencedEntity =
-                        sessionLevelCache.TryToFind(entityMapping.EntityType, foreignKeyValue) ??
+                        sessionLevelCache.TryToFind(oneToOneMapping.ReferenceType, foreignKeyValue) ??
                         CreateLazyLoadingProxy(entityMapping, oneToOneMapping, foreignKeyValue);
 
                     oneToOneMapping.PropertyInfo.SetValue(entity, referencedEntity, null);

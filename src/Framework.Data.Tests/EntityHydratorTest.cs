@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Collections.Generic;
 using System.Configuration;
+using Framework.Data.ResultSetMapping;
 
 namespace Framework.Data.Tests
 {
@@ -76,6 +77,31 @@ namespace Framework.Data.Tests
             metadataStoreMock.Setup(_ => _.GetMapping(It.IsAny<Type>())).Returns<Type>(_ => mappings[_.Name]);
             metadataStoreMock.Setup(_ => _.GetMapping(It.IsAny<string>())).Returns<string>(_ => mappings[_]);
 
+            var cache = new Dictionary<Type, Dictionary<string, object>>();
+            sessionLevelCacheMock.Setup(_ => _.Store(It.IsAny<Type>(), It.IsAny<object>(), It.IsAny<object>()))
+                .Callback<Type, object, object>((entityType, entityKey, entity) =>
+                {
+                    Dictionary<string, object> entityCache;
+                    if (!cache.TryGetValue(entityType, out entityCache))
+                    {
+                        cache.Add(entityType, entityCache = new Dictionary<string, object>());
+                    }
+                    entityCache.Add(entityKey.ToString(), entity);
+                });
+            sessionLevelCacheMock.Setup(_ => _.TryToFind(It.IsAny<Type>(), It.IsAny<object>()))
+                .Returns<Type, object>((entityType, entityKey) =>
+                {
+                    Dictionary<string, object> entityCache;
+                    if (!cache.TryGetValue(entityType, out entityCache))
+                    {
+                        return null;
+                    }
+                    object entity;
+                    if (!entityCache.TryGetValue(entityKey.ToString(), out entity))
+                        return null;
+                    return entity;
+                });
+
             hydrator = new EntityHydrator(metadataStoreMock.Object, sessionMock.Object, sessionLevelCacheMock.Object);
 
             connection = new SqlConnection(ConfigurationManager.ConnectionStrings["TestDatabase"].ConnectionString);
@@ -119,6 +145,53 @@ namespace Framework.Data.Tests
                 Assert.AreEqual(1, book.Id);
                 Assert.IsNotNull(book.Author);
                 Assert.IsNotNull(book.Author.Id);
+            }
+        }
+
+        [TestMethod]
+        public void It_should_uses_the_alias_when_provided()
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText =
+                    "SELECT Id as B_Id, Title as B_Title, Description as B_Description, AuthorId as B_AuthorId " +
+                    "FROM Books " +
+                    "WHERE Id = 1";
+
+                var book = (Book)hydrator.HydrateFromCommand(
+                    command,
+                    new ResultSetMappingDefinition().AddQueryReturn(new QueryRootResult("B", "Book"))
+                );
+
+                Assert.AreEqual(1, book.Id);
+                Assert.IsNotNull(book.Author);
+                Assert.IsNotNull(book.Title);
+            }
+        }
+
+        [TestMethod]
+        public void It_should_eagerly_load_entity_from_a_join()
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText =
+                    "Select B.*, A.Id as A_Id, A.FirstName as A_FirstName, A.MiddleName as A_MiddleName, A.LastName as A_LastName " +
+                    "FROM Books as B " +
+                    "LEFT JOIN Authors as A ON B.AuthorId = A.Id " +
+                    "WHERE B.Id = 1";
+
+                var book = (Book)hydrator.HydrateFromCommand(command, new ResultSetMappingDefinition()
+                    .AddQueryReturn(new QueryRootResult("Book"))
+                    .AddQueryReturn(new QueryJoinResult("A", string.Empty, "AuthorId")));
+
+                Assert.AreEqual(1, book.Id);
+                Assert.IsNotNull(book.Author);
+                Assert.IsNotNull(book.Title);
+                Assert.IsNotNull(book.Author.Id);
+                Assert.IsNotNull(book.Author.FirstName);
+                Assert.IsNotNull(book.Author.LastName);
             }
         }
     }
