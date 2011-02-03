@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -37,10 +38,32 @@ namespace Framework.Data
         public TEntity HydrateEntity<TEntity>(IDbCommand command)
         {
             var resultSetDefinition = new ResultSetMappingDefinition().AddQueryReturn(new QueryRootResult(typeof(TEntity).Name));
-            return (TEntity)HydrateFromCommand(command, resultSetDefinition);
+            return (TEntity)HydrateEntity(command, resultSetDefinition);
         }
 
-        public object HydrateFromCommand(IDbCommand command, ResultSetMappingDefinition resultSetMapping)
+        /// <summary>
+        /// Hydrates the entities.
+        /// </summary>
+        /// <typeparam name="TEntity">The type of the entity.</typeparam>
+        /// <param name="command">The command.</param>
+        /// <returns></returns>
+        public IEnumerable<TEntity> HydrateEntities<TEntity>(IDbCommand command)
+        {
+            var resultSetDefinition = new ResultSetMappingDefinition().AddQueryReturn(new QueryRootResult(typeof(TEntity).Name));
+            return HydrateEntities(command, resultSetDefinition).Cast<TEntity>();
+        }
+
+        public IEnumerable<TEntity> HydrateEntities<TEntity>(IDbCommand command, ResultSetMappingDefinition resultSetMapping)
+        {
+            return HydrateEntities(command, resultSetMapping).Cast<TEntity>();
+        }
+
+        public object HydrateEntity(IDbCommand command, ResultSetMappingDefinition resultSetMapping)
+        {
+            return HydrateEntities(command, resultSetMapping).Cast<object>().First();
+        }
+
+        public IEnumerable HydrateEntities(IDbCommand command, ResultSetMappingDefinition resultSetMapping)
         {
             if (command == null) throw new ArgumentNullException("command");
             if (resultSetMapping == null) throw new ArgumentNullException("resultSetMapping");
@@ -68,7 +91,7 @@ namespace Framework.Data
                     if (joinResultMapping != null) return Process(resultSetMapping, joinResultMapping, rows);
                     throw new NotSupportedException();
                 });
-            return results.Last();
+            return results.Reverse();
         }
 
         private object Process(ResultSetMappingDefinition resultSetMapping, QueryJoinResult joinResultMapping, List<Dictionary<string, object>> rows)

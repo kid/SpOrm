@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Data;
-using System.Data.SqlClient;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
 using Framework.Data.ResultSetMapping;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Framework.Data.Tests
 {
@@ -98,7 +99,9 @@ namespace Framework.Data.Tests
                     }
                     object entity;
                     if (!entityCache.TryGetValue(entityKey.ToString(), out entity))
+                    {
                         return null;
+                    }
                     return entity;
                 });
 
@@ -159,7 +162,7 @@ namespace Framework.Data.Tests
                     "FROM Books " +
                     "WHERE Id = 1";
 
-                var book = (Book)hydrator.HydrateFromCommand(
+                var book = (Book)hydrator.HydrateEntity(
                     command,
                     new ResultSetMappingDefinition().AddQueryReturn(new QueryRootResult("B", "Book"))
                 );
@@ -182,7 +185,7 @@ namespace Framework.Data.Tests
                     "LEFT JOIN Authors as A ON B.AuthorId = A.Id " +
                     "WHERE B.Id = 1";
 
-                var book = (Book)hydrator.HydrateFromCommand(command, new ResultSetMappingDefinition()
+                var book = (Book)hydrator.HydrateEntity(command, new ResultSetMappingDefinition()
                     .AddQueryReturn(new QueryRootResult("Book"))
                     .AddQueryReturn(new QueryJoinResult("A", string.Empty, "AuthorId")));
 
@@ -192,6 +195,20 @@ namespace Framework.Data.Tests
                 Assert.IsNotNull(book.Author.Id);
                 Assert.IsNotNull(book.Author.FirstName);
                 Assert.IsNotNull(book.Author.LastName);
+            }
+        }
+
+        [TestMethod]
+        public void It_should_load_a_collection()
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "SELECT * FROM Books";
+
+                var books = hydrator.HydrateEntities<Book>(command);
+
+                Assert.IsTrue(books.Count() > 1);
             }
         }
     }
