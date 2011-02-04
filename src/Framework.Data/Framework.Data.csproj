@@ -75,7 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Framework.Metadata\Framework.Metadata.csproj">
-      <Project>{F59320CF-3208-4D2A-AD1B-76A653345E5C}</Project>
+      <Project>{BB92617A-30CB-451A-82DF-78AFBBD37D81}</Project>
       <Name>Framework.Metadata</Name>
     </ProjectReference>
   </ItemGroup>

@@ -5,13 +5,14 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{F59320CF-3208-4D2A-AD1B-76A653345E5C}</ProjectGuid>
+    <ProjectGuid>{BB92617A-30CB-451A-82DF-78AFBBD37D81}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Framework.Metadata</RootNamespace>
     <AssemblyName>Framework.Metadata</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -49,12 +50,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Mapping\ClassMap.cs" />
+    <Compile Include="Mapping\Providers\ICollectionMappingProvider.cs" />
+    <Compile Include="Mapping\IdentityPart.cs" />
+    <Compile Include="Mapping\Providers\IIdentityMappingProvider.cs" />
+    <Compile Include="Mapping\Providers\IManyToOneMappingProvider.cs" />
+    <Compile Include="Mapping\Providers\IOneToOneMappingProvider.cs" />
+    <Compile Include="Mapping\Providers\IPropertyMappingProvider.cs" />
+    <Compile Include="Mapping\ManyToOneBuilder.cs" />
+    <Compile Include="Mapping\OneToManyBuilder.cs" />
+    <Compile Include="Mapping\OneToOneBuilder.cs" />
+    <Compile Include="Mapping\PropertyBuilder.cs" />
+    <Compile Include="Model\PropertyMapping.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Framework.snk">
       <Link>Framework.snk</Link>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Framework\Framework.csproj">
+      <Project>{ABFD189A-C8E7-457B-9E91-49F39667B3B0}</Project>
+      <Name>Framework</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
